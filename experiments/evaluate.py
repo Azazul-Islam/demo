@@ -7,12 +7,9 @@ from typing import Tuple, Union
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from baselines.ft import FTHyperParams, apply_ft_to_model
-from baselines.mend import MENDHyperParams, MendRewriteExecutor
 from dsets import (
     AttributeSnippets,
     CounterFactDataset,
-    MENDQADataset,
     MultiCounterFactDataset,
     get_tfidf_vectorizer,
 )
@@ -26,14 +23,11 @@ from util.globals import *
 ALG_DICT = {
     "MEMIT": (MEMITHyperParams, apply_memit_to_model),
     "ROME": (ROMEHyperParams, apply_rome_to_model),
-    "FT": (FTHyperParams, apply_ft_to_model),
-    "MEND": (MENDHyperParams, MendRewriteExecutor().apply_to_model),
 }
 
 DS_DICT = {
     "mcf": (MultiCounterFactDataset, compute_rewrite_quality_counterfact),
     "cf": (CounterFactDataset, compute_rewrite_quality_counterfact),
-    "zsre": (MENDQADataset, compute_rewrite_quality_zsre),
 }
 
 
@@ -137,7 +131,7 @@ def main(
         case_ids = [record["case_id"] for record in record_chunks]
         args_conserve_memory = (
             dict(return_orig_weights_device=("cpu" if conserve_memory else "cuda"))
-            if conserve_memory
+            if conserve_memory and alg_name == "MEND"
             else dict()
         )
         etc_args = dict(cache_template=cache_template) if any(alg in alg_name for alg in ["ROME", "MEMIT"]) else dict()
@@ -222,7 +216,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--alg_name",
-        choices=["MEMIT", "ROME", "FT", "MEND"],
+        choices=["MEMIT", "ROME"],
         default="ROME",
         help="Editing algorithm to use. Results are saved in results/<alg_name>/<run_id>, "
         "where a new run_id is generated on each run. "
@@ -245,9 +239,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--ds_name",
-        choices=["mcf", "cf", "zsre"],
+        choices=["mcf", "cf"],
         default="mcf",
-        help="Dataset to perform evaluations on. Either CounterFact (cf), MultiCounterFact (mcf), or zsRE (zsre).",
+        help="Dataset to perform evaluations on. Either CounterFact (cf) or MultiCounterFact (mcf).",
     )
     parser.add_argument(
         "--continue_from_run",
