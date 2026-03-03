@@ -41,3 +41,4 @@ class AttributeSnippets:
 
     def __getitem__(self, item):
         return self._data[item]
+
